@@ -20,7 +20,7 @@ type Message struct {
 }
 
 func main() {
-	listen, err := net.Listen("tcp", "127.0.0.1:1234")
+	listen, err := net.Listen("tcp", "192.168.31.110:1234")
 	if err != nil {
 		log.Printf("fail to listen the address, err: %v\n", err)
 		return

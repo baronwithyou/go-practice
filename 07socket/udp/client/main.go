@@ -8,7 +8,7 @@ import (
 
 func main() {
 	socket, err := net.DialUDP("udp", nil, &net.UDPAddr{
-		IP:   net.IPv4(0,0,0,0),
+		IP:   net.IPv4(0, 0, 0, 0),
 		Port: 1235,
 	})
 	if err != nil {
@@ -30,5 +30,5 @@ func main() {
 		log.Printf("fail to read message, err: %v", err)
 		return
 	}
-	fmt.Printf("recv:%v addr:%v count:%v\n", string(data[:n]), remoteAddr,n)
+	fmt.Printf("recv:%v addr:%v count:%v\n", string(data[:n]), remoteAddr, n)
 }

@@ -7,7 +7,7 @@ import (
 
 func main() {
 	listen, err := net.ListenUDP("udp", &net.UDPAddr{
-		IP: net.IPv4(0,0,0,0),
+		IP:   net.IPv4(0, 0, 0, 0),
 		Port: 1235,
 	})
 	if err != nil {
