@@ -5,9 +5,8 @@ import (
 	"sync"
 )
 
-var fetched sync.Map
-var mu sync.Mutex
-var wg sync.WaitGroup
+// 这里不使用原子map，因为原子性不能保证线程能够取得正确的值
+//var fetched sync.Map
 
 type Fetcher interface {
 	// Fetch returns the body of URL and
@@ -15,9 +14,14 @@ type Fetcher interface {
 	Fetch(url string) (body string, urls []string, err error)
 }
 
+type fetchState struct {
+	fetched map[string]bool
+	mu      sync.Mutex
+}
+
 // Crawl uses fetcher to recursively crawl
 // pages starting with url, to a maximum of depth.
-func Crawl(url string, depth int, fetcher Fetcher, result chan<- string) {
+func Crawl(url string, depth int, fetcher Fetcher, result chan<- string, f *fetchState) {
 	// TODO: Fetch URLs in parallel.
 	// TODO: Don't fetch the same URL twice.
 	// This implementation doesn't do either:
@@ -26,11 +30,15 @@ func Crawl(url string, depth int, fetcher Fetcher, result chan<- string) {
 		return
 	}
 
-	if v, ok := fetched.Load(url); ok && v.(bool) {
+	f.mu.Lock()
+
+	already := f.fetched[url]
+	f.fetched[url] = true
+	f.mu.Unlock()
+
+	if already {
 		return
 	}
-
-	fetched.Store(url, true)
 
 	body, urls, err := fetcher.Fetch(url)
 	if err != nil {
@@ -42,7 +50,7 @@ func Crawl(url string, depth int, fetcher Fetcher, result chan<- string) {
 	results := make([]chan string, len(urls))
 	for i, u := range urls {
 		results[i] = make(chan string)
-		go Crawl(u, depth-1, fetcher, results[i])
+		go Crawl(u, depth-1, fetcher, results[i], f)
 	}
 
 	for _, ret := range results {
@@ -55,8 +63,13 @@ func Crawl(url string, depth int, fetcher Fetcher, result chan<- string) {
 }
 
 func main() {
+	f := &fetchState{
+		fetched: make(map[string]bool),
+		mu:      sync.Mutex{},
+	}
+	//fetched = make(map[string]bool)
 	result := make(chan string)
-	go Crawl("https://golang.org/", 4, fetcher, result)
+	go Crawl("https://golang.org/", 4, fetcher, result, f)
 
 	for v := range result {
 		fmt.Println(v)

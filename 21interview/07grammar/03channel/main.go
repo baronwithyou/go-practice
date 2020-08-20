@@ -7,9 +7,12 @@ import (
 
 func main() {
 	abc := make(chan int, 20)
-	for i := 0; i < 10; i++ {
-		abc <- i
-	}
+	go func() {
+		for i := 0; i < 10; i++ {
+			abc <- i
+		}
+	}()
+
 	go func() {
 		for {
 			a, ok := <-abc
