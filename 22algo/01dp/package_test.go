@@ -8,7 +8,7 @@ func TestPackage(t *testing.T) {
 	workerNum := 10
 
 	want := 900
-	if got := solve(workerNum, minePrices, mineWorkload); got != want {
+	if got := solve1(workerNum, minePrices, mineWorkload); got != want {
 		t.Errorf("want: %d, got: %d", want, got)
 	}
 }

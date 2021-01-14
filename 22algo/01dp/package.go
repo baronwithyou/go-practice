@@ -13,11 +13,11 @@ workNum - 现有的工人数量
 minePrices - 每个矿的价格
 mineWorkload - 每个矿需要的人数
 */
-func solve(workerNum int, minePrices, mineWorkload []int) int {
-	return dp(len(minePrices)-1, workerNum, minePrices, mineWorkload)
+func solve1(workerNum int, minePrices, mineWorkload []int) int {
+	return recursive(len(minePrices)-1, workerNum, minePrices, mineWorkload)
 }
 
-func dp(i, workerNum int, minePrices, mineWorkload []int) int {
+func recursive(i, workerNum int, minePrices, mineWorkload []int) int {
 	if mineWorkload[i] > workerNum {
 		return 0
 	}
@@ -29,7 +29,7 @@ func dp(i, workerNum int, minePrices, mineWorkload []int) int {
 		return 0
 	}
 
-	return max(dp(i-1, workerNum, minePrices, mineWorkload), dp(i-1, workerNum-mineWorkload[i], minePrices, mineWorkload)+minePrices[i])
+	return max(recursive(i-1, workerNum, minePrices, mineWorkload), recursive(i-1, workerNum-mineWorkload[i], minePrices, mineWorkload)+minePrices[i])
 }
 
 func max(a, b int) int {
