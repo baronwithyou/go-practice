@@ -17,6 +17,37 @@ func solve1(workerNum int, minePrices, mineWorkload []int) int {
 	return recursive(len(minePrices)-1, workerNum, minePrices, mineWorkload)
 }
 
+/**
+dp
+*/
+func solve2(workerNum int, minePrices, mineWorkload []int) int {
+	dp := make([][]int, len(minePrices))
+
+	length := len(minePrices)
+
+	// 这里写第0行以下的记录
+	for i := 0; i < length; i++ {
+		dp[i] = make([]int, workerNum+1)
+
+		for j := 0; j <= workerNum; j++ {
+			// 如果当前的人数不满足
+			if mineWorkload[i] > j {
+				dp[i][j] = 0
+				continue
+			}
+
+			if i == 0 {
+				dp[i][j] = minePrices[i]
+				continue
+			}
+
+			dp[i][j] = max(dp[i-1][j], dp[i-1][j-mineWorkload[i]]+minePrices[i])
+		}
+	}
+
+	return dp[length-1][workerNum]
+}
+
 func recursive(i, workerNum int, minePrices, mineWorkload []int) int {
 	if mineWorkload[i] > workerNum {
 		return 0
