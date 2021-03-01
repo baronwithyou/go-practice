@@ -1,4 +1,4 @@
-package article
+package model
 
 import (
 	"context"
@@ -51,17 +51,46 @@ func (a *ArticleRepo) ArticleVote(article, user string) {
 func (a *ArticleRepo) PostArticle(user, title, link string) string {
 	articleId := strconv.Itoa(int(a.Conn.Incr(a.Ctx, "article:").Val()))
 
-	a.Conn.HSet(a.Ctx, "article:"+articleId, []map[string]string{
+	// 自己给自己投票，并且给投票set设置一个过期时间
+	voted := "voted:" + articleId
+	a.Conn.SAdd(a.Ctx, voted, user)
+	a.Conn.Expire(a.Ctx, voted, time.Second*OneWeekInSeconds)
+
+	now := time.Now().Unix()
+
+	a.Conn.HSet(a.Ctx, "article:"+articleId, map[string]interface{}{
 		"user":  user,
 		"title": title,
 		"link":  link,
+		"time":  now,
+		"votes": 1,
 	})
+
+	// 初始化排名分数
+	a.Conn.ZAdd(a.Ctx, "score:", &redis.Z{Score: float64(now + VoteScore), Member: articleId})
+	// 初始化文章时间
+	a.Conn.ZAdd(a.Ctx, "time:", &redis.Z{Score: float64(now), Member: articleId})
+
 	return ""
 }
 
 func (a *ArticleRepo) GetArticles(page int64, order string) []map[string]string {
+	if order == "" {
+		order = "score:"
+	}
 
-	return nil
+	start := (page - 1) * ArticlesPerPage
+	end := start + ArticlesPerPage - 1
+	articles := []map[string]string{}
+
+	ids := a.Conn.ZRevRange(a.Ctx, order, start, end).Val()
+	for _, id := range ids {
+		data := a.Conn.HGetAll(a.Ctx, "article:"+id).Val()
+		data["id"] = id
+		articles = append(articles, data)
+	}
+
+	return articles
 }
 
 func (a *ArticleRepo) AddRemoveGroups(articleId string, toAdd []string, toRemove []string) {
