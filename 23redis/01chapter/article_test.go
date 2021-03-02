@@ -22,6 +22,13 @@ func TestChapter1(t *testing.T) {
 	repo := model.NewArticleRepo(conn)
 	// repo.PostArticle("baron", "leave", "wanna go")
 
+	// repo.ArticleVote("article:"+articleId, "baron")
+
 	articles := repo.GetArticles(1, "score:")
 	t.Log(articles)
+
+	repo.AddRemoveGroups("7", []string{"new-group"}, []string{})
+
+	groupArticles := repo.GetGroupArticles("new-group", "score:", 1)
+	t.Log(groupArticles)
 }

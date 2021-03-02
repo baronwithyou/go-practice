@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"log"
 	"strconv"
 	"time"
 
@@ -58,7 +59,8 @@ func (a *ArticleRepo) PostArticle(user, title, link string) string {
 
 	now := time.Now().Unix()
 
-	a.Conn.HSet(a.Ctx, "article:"+articleId, map[string]interface{}{
+	article := "article:" + articleId
+	a.Conn.HSet(a.Ctx, article, map[string]interface{}{
 		"user":  user,
 		"title": title,
 		"link":  link,
@@ -67,11 +69,11 @@ func (a *ArticleRepo) PostArticle(user, title, link string) string {
 	})
 
 	// 初始化排名分数
-	a.Conn.ZAdd(a.Ctx, "score:", &redis.Z{Score: float64(now + VoteScore), Member: articleId})
+	a.Conn.ZAdd(a.Ctx, "score:", &redis.Z{Score: float64(now + VoteScore), Member: article})
 	// 初始化文章时间
-	a.Conn.ZAdd(a.Ctx, "time:", &redis.Z{Score: float64(now), Member: articleId})
+	a.Conn.ZAdd(a.Ctx, "time:", &redis.Z{Score: float64(now), Member: article})
 
-	return ""
+	return articleId
 }
 
 func (a *ArticleRepo) GetArticles(page int64, order string) []map[string]string {
@@ -94,13 +96,33 @@ func (a *ArticleRepo) GetArticles(page int64, order string) []map[string]string 
 }
 
 func (a *ArticleRepo) AddRemoveGroups(articleId string, toAdd []string, toRemove []string) {
+	// 将文章加到group里面去
+	article := "article:" + articleId
 
+	for _, groupId := range toAdd {
+		a.Conn.SAdd(a.Ctx, "group:"+groupId, article)
+	}
+
+	for _, groupId := range toRemove {
+		a.Conn.SRem(a.Ctx, "group:"+groupId, article)
+	}
 }
 
 func (a *ArticleRepo) GetGroupArticles(group, order string, page int64) []map[string]string {
-	return nil
+	if order == "" {
+		order = "score:"
+	}
+	key := order + group
+	if a.Conn.Exists(a.Ctx, key).Val() == 0 {
+		res := a.Conn.ZInterStore(a.Ctx, key, &redis.ZStore{Aggregate: "MAX", Keys: []string{"group:" + group, order}}).Val()
+		if res <= 0 {
+			log.Println("ZInterStore return 0")
+		}
+	}
+	a.Conn.Expire(a.Ctx, key, 60*time.Second)
+	return a.GetArticles(page, key)
 }
 
 func (a *ArticleRepo) Reset() {
-
+	a.Conn.FlushDB(a.Ctx)
 }
